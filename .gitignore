@@ -1,0 +1,9 @@
+Source/pdex.bin
+Source/pdex.so
+Source/pdex.dll
+PlaydateGameSelect.pdx/
+build/
+win_build/
+*.zip
+*.bak
+Source/pdex.elf

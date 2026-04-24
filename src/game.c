@@ -1,0 +1,141 @@
+#include <math.h>
+
+#include "game.h"
+
+PlaydateAPI* pd = NULL;
+
+int32_t m_frameCount = 0;
+int32_t m_animateOut = 0;
+
+enum kGameType{
+  kYCGB,
+  kFactoryFarming,
+  kCascada,
+  kNGameTypes
+};
+
+enum kGameType m_selected = kYCGB;
+
+LCDBitmap* m_catImg = NULL;
+LCDBitmap* m_gameImg[kNGameTypes] = {NULL};
+LCDBitmap* m_banner[kNGameTypes] = {NULL};
+FilePlayer* m_tracks[kNGameTypes] = {NULL};
+SamplePlayer* m_samplePlayerA = NULL;
+SamplePlayer* m_samplePlayerB = NULL;
+AudioSample* m_audioSampleA = NULL;
+AudioSample* m_audioSampleB = NULL; 
+
+////////////
+
+void setPDPtr(PlaydateAPI* _p) {
+  pd = _p;
+}
+
+void chkErr(const char* _outErr) {
+  if (_outErr != NULL) {
+    pd->system->error("Error loading image: %s", _outErr);
+  }
+}
+
+void render(void) {
+
+
+
+  pd->graphics->drawBitmap(m_gameImg[kYCGB], 1, 0, kBitmapUnflipped);
+  pd->graphics->drawBitmap(m_gameImg[kFactoryFarming], 132 + 2, 0, kBitmapUnflipped);
+  pd->graphics->drawBitmap(m_gameImg[kCascada], 132 + 132 + 3, 0, kBitmapUnflipped);
+
+  const bool flash = (m_frameCount % 50) < 25 && !m_animateOut;
+
+  pd->graphics->setDrawMode((flash && m_selected == kYCGB) ? kDrawModeInverted : kDrawModeCopy);
+  pd->graphics->drawBitmap(m_catImg, 1, 0, kBitmapUnflipped);
+  pd->graphics->setDrawMode((flash && m_selected == kFactoryFarming) ? kDrawModeInverted : kDrawModeCopy);
+  pd->graphics->drawBitmap(m_catImg, 132 + 2, 0, kBitmapUnflipped);
+  pd->graphics->setDrawMode((flash && m_selected == kCascada) ? kDrawModeInverted : kDrawModeCopy);
+  pd->graphics->drawBitmap(m_catImg, 132 + 132 + 3, 0, kBitmapUnflipped);
+  pd->graphics->setDrawMode(kDrawModeCopy);
+
+  switch (m_selected) {
+    case kYCGB: pd->graphics->drawBitmap(m_banner[m_selected], 0, 16, kBitmapUnflipped); break;
+    case kFactoryFarming: pd->graphics->drawBitmap(m_banner[m_selected], 0, 0, kBitmapUnflipped); break;
+    case kCascada: pd->graphics->drawBitmap(m_banner[m_selected], 0, 16, kBitmapUnflipped); break;
+    default:
+  }
+
+  if (m_animateOut) {
+    pd->graphics->fillEllipse(DEVICE_PIX_X/2 - m_animateOut/2, DEVICE_PIX_Y/2 - m_animateOut/2, m_animateOut, m_animateOut, 0, 360.0f, kColorBlack);
+    uint32_t inner = round( m_animateOut * 0.9f );
+    pd->graphics->fillEllipse(DEVICE_PIX_X/2 - inner/2, DEVICE_PIX_Y/2 - inner/2, inner, inner, 0, 360.0f, kColorWhite);
+  }
+}
+
+void stopS(void) {
+  for (enum kGameType gt = kYCGB; gt < kNGameTypes; ++gt) pd->sound->fileplayer->stop(m_tracks[gt]);
+}
+
+void butL(void) {
+  m_selected = (m_selected + 1) % kNGameTypes;
+  stopS();
+  pd->sound->fileplayer->play(m_tracks[m_selected], 0);
+  pd->sound->sampleplayer->play(m_samplePlayerB, 1, 1.0f);
+}
+
+void butR(void) {
+  m_selected = (!m_selected ? kNGameTypes-1 : m_selected - 1);
+  stopS();
+  pd->sound->fileplayer->play(m_tracks[m_selected], 0);
+  pd->sound->sampleplayer->play(m_samplePlayerB, 1, 1.0f);
+}
+
+void butA(void) {
+  ++m_animateOut;
+  m_frameCount = 0;
+  stopS();
+  pd->sound->sampleplayer->play(m_samplePlayerA, 1, 1.0f);
+}
+
+int gameLoop(void* _data) {
+  ++m_frameCount;
+  pd->graphics->setBackgroundColor(kColorWhite);
+
+  if (!m_catImg) {
+    const char* _outErr = NULL;
+    m_catImg = pd->graphics->loadBitmap("images/game_select_frame.png", &_outErr); chkErr(_outErr);
+    m_gameImg[kYCGB] = pd->graphics->loadBitmap("images/game_select_ycgb.png", &_outErr); chkErr(_outErr);
+    m_gameImg[kFactoryFarming] = pd->graphics->loadBitmap("images/game_select_ff.png", &_outErr); chkErr(_outErr);
+    m_gameImg[kCascada] = pd->graphics->loadBitmap("images/game_select_c.png", &_outErr); chkErr(_outErr);
+    m_banner[kYCGB] = pd->graphics->loadBitmap("images/splash_ycgb.png", &_outErr); chkErr(_outErr);
+    m_banner[kFactoryFarming] = pd->graphics->loadBitmap("images/splash_ff.png", &_outErr); chkErr(_outErr);
+    m_banner[kCascada] = pd->graphics->loadBitmap("images/splash_c.png", &_outErr); chkErr(_outErr);
+
+    m_tracks[kYCGB] = pd->sound->fileplayer->newPlayer();
+    pd->sound->fileplayer->loadIntoPlayer(m_tracks[kYCGB], "sounds/8bitDungeonLevel");
+    m_tracks[kFactoryFarming] = pd->sound->fileplayer->newPlayer();
+    pd->sound->fileplayer->loadIntoPlayer(m_tracks[kFactoryFarming], "music/1985");
+    m_tracks[kCascada] = pd->sound->fileplayer->newPlayer();
+    pd->sound->fileplayer->loadIntoPlayer(m_tracks[kCascada], "tracks/690224__nox_sound__ambiance_waterfall_big_skogafoss_loop_stereo");
+
+    m_audioSampleA = pd->sound->sample->load("sounds/a");
+    m_audioSampleB = pd->sound->sample->load("sounds/b");
+    m_samplePlayerA = pd->sound->sampleplayer->newPlayer();
+    m_samplePlayerB = pd->sound->sampleplayer->newPlayer();
+    pd->sound->sampleplayer->setSample(m_samplePlayerA, m_audioSampleA);
+    pd->sound->sampleplayer->setSample(m_samplePlayerB, m_audioSampleB);
+
+    pd->sound->fileplayer->play(m_tracks[kYCGB], 0);
+  }
+
+  render();
+
+  if (!m_animateOut) {
+    PDButtons current, pushed, released = 0;
+    pd->system->getButtonState(&current, &pushed, &released);
+    if (pushed & kButtonRight) butL();
+    if (pushed & kButtonLeft) butR();
+    if (pushed & kButtonA) butA();
+  } else {
+    m_animateOut += m_frameCount;
+  }
+
+  return 1;
+}
