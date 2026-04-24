@@ -1,8 +1,6 @@
-name=Factory Farming
+name=Timboe's Playdate Catalog
 author=Tim Martin
-description=Cultivation meets Automation
-bundleID=uk.co.tim-martin.factoryfarming
-version=1.70
-buildNumber=170
-imagePath=titles
-launchSoundPath=sounds/a
+description=Bundle of Playdate Games
+bundleID=uk.co.tim-martin.playdategameselect
+version=1.0
+buildNumber=1
