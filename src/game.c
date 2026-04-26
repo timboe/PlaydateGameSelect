@@ -2,6 +2,13 @@
 
 #include "game.h"
 
+#ifdef SDL2API
+  #include "../srcgame_ycgb/game.h"
+  #include "../srcgame_ycgb/sprite.h"
+  #include "../srcgame_ycgb/sound.h"
+
+#endif
+
 PlaydateAPI* pd = NULL;
 
 int32_t m_frameCount = 0;
@@ -31,15 +38,34 @@ void setPDPtr(PlaydateAPI* _p) {
   pd = _p;
 }
 
+///////////
+
+#ifdef SDL2API
+
+  void initSubgame(void) {
+    if (m_selected == kYCGB) {
+      initSprite_ycgb(pd);
+      initSound_ycgb(pd);
+      gameWindowLoad_ycgb();
+      pd->display->setRefreshRate(20);
+      pd->system->setUpdateCallback(gameLoop_ycgb, NULL);
+    }
+  }
+
+#endif
+
+///////////
+
 void chkErr(const char* _outErr) {
   if (_outErr != NULL) {
     pd->system->error("Error loading image: %s", _outErr);
   }
 }
 
+bool gameIsSelected(void) { return m_frameCount > DEVICE_PIX_X; }
+
 void render(void) {
-
-
+  if (gameIsSelected()) return;
 
   pd->graphics->drawBitmap(m_gameImg[kYCGB], 1, 0, kBitmapUnflipped);
   pd->graphics->drawBitmap(m_gameImg[kFactoryFarming], 132 + 2, 0, kBitmapUnflipped);
@@ -95,6 +121,19 @@ void butA(void) {
 }
 
 int gameLoop(void* _data) {
+
+  if (gameIsSelected()) {
+    static bool doneInit = false;
+    #ifdef SDL2API
+    if (!doneInit) {
+      stopS();
+      initSubgame();
+    }
+    #endif
+    doneInit = true;
+    return 1;
+  }
+
   ++m_frameCount;
   pd->graphics->setBackgroundColor(kColorWhite);
 
