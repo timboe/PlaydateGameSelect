@@ -219,9 +219,11 @@ int gameLoop(void* _data) {
 void processPause(void) {
   if (!gameIsSelected()) return;
 
-  if (m_selected == kFactoryFarming) {
-    pd->system->setMenuImage(getPauseImage(), 0);
-  }
+  #ifdef SDL2API
+    if (m_selected == kFactoryFarming) {
+      pd->system->setMenuImage(getPauseImage(), 0);
+    }
+  #endif
 
 }
 
@@ -229,17 +231,14 @@ void processTerminate(void) {
 
   if (!gameIsSelected()) return;
 
-  if (m_selected == kFactoryFarming) {
-    if (getGameMode() != kTitles && !IOOperationInProgress()) {
-      synchronousSave();
+  #ifdef SDL2API
+    if (m_selected == kFactoryFarming) {
+      if (getGameMode() != kTitles && !IOOperationInProgress()) {
+        synchronousSave();
+      }
+    } else if (m_selected == kCascada) {
+      IODoSave();
     }
-  } else if (m_selected == kCascada) {
-    IODoSave();
-  }
-
-
-
-
-
+  #endif
 
 }
