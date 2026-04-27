@@ -10,13 +10,6 @@ __declspec(dllexport)
 
 #define VERSION "1.0"
 
-void init(void) {
-
-}
-
-static void deinit(void) {
-}
-
 int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
   switch (event) {
     case kEventInit:;
@@ -24,7 +17,6 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
       playdate->system->logToConsole("EH: init %s", VERSION);
       #endif
       setPDPtr(playdate);
-      init();
       playdate->display->setRefreshRate(50);
       playdate->system->setUpdateCallback(gameLoop, NULL);
       break;
@@ -32,10 +24,8 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
       #ifdef DEV
       playdate->system->logToConsole("EH: terminate/lock/low-p, %i", event);
       #endif
-      //
-      //
       if (event == kEventTerminate) {
-        deinit();
+        processTerminate();
       }
       break;
     case kEventUnlock:;
@@ -47,6 +37,7 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
       #ifdef DEV
       playdate->system->logToConsole("EH: pause");
       #endif
+      processPause();
       break;
     case kEventResume:;
       #ifdef DEV

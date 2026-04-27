@@ -13,3 +13,7 @@ extern PlaydateAPI* pd;
 void setPDPtr(PlaydateAPI* _p);
 
 int gameLoop(void* _data);
+
+void processPause(void);
+
+void processTerminate(void);

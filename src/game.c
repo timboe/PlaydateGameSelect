@@ -214,3 +214,30 @@ int gameLoop(void* _data) {
 
   return 1;
 }
+
+
+void processPause(void) {
+  if (!gameIsSelected()) return;
+
+  if (m_selected == kFactoryFarming) {
+    pd->system->setMenuImage(getPauseImage(), 0);
+  }
+
+}
+
+void processTerminate(void) {
+
+  if (!gameIsSelected()) return;
+
+  if (m_selected == kFactoryFarming) {
+    if (getGameMode() != kTitles && !IOOperationInProgress()) {
+      synchronousSave();
+    }
+  }
+
+
+
+
+
+
+}
