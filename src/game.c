@@ -1,17 +1,14 @@
-#include <math.h>
-
 #include "game.h"
 
 #ifdef SDL2API
-  #include "../srcgame_ycgb/game.h"
-  #include "../srcgame_ycgb/sprite.h"
-  #include "../srcgame_ycgb/sound.h"
-
+  #include "../srcgame_ycgb/minimal.h"
+  #include "../srcgame_cascada/minimal.h"
+  #include "../srcgame_ff/minimal.h"
 #endif
 
 PlaydateAPI* pd = NULL;
 
-int32_t m_frameCount = 0;
+int32_t m_fCount = 0;
 int32_t m_animateOut = 0;
 
 enum kGameType{
@@ -44,11 +41,50 @@ void setPDPtr(PlaydateAPI* _p) {
 
   void initSubgame(void) {
     if (m_selected == kYCGB) {
+
       initSprite_ycgb(pd);
       initSound_ycgb(pd);
       gameWindowLoad_ycgb();
+
       pd->display->setRefreshRate(20);
       pd->system->setUpdateCallback(gameLoop_ycgb, NULL);
+
+    } else if (m_selected == kFactoryFarming) {
+      initLocalisation();
+      initSprite();
+      initWorld();
+      initMap();
+      initCargo();
+      initChunk();
+      initLocation();
+      initPlayer();
+      initiUI();
+      initBuilding();
+      initSound();
+      initGame();
+      for (int32_t s = 0; s < N_SAVES; ++s) {
+        setSave(s);
+        scanSlots();
+      }
+      doIO(kDoTitle, /*and then*/ kDoNothing, /*and finally*/ kDoNothing);
+
+      #define TICK_FREQUENCY 50
+      pd->display->setRefreshRate(TICK_FREQUENCY);
+      pd->system->setUpdateCallback(gameLoop_ff, NULL);
+
+    } else if (m_selected == kCascada) {
+
+      boardDoInit_cascada();
+      bitmapDoInit_cascada();
+      soundDoInit_cascada();
+      physicsDoInit_cascada();
+      inputDoInit_cascada();
+      FSMDo_cascada(kTitlesFSM_DisplayTitles);
+
+      #define TICK_FREQUENCY 50
+      pd->display->setRefreshRate(TICK_FREQUENCY);
+      pd->system->setUpdateCallback(gameLoop_cascada, NULL);
+
     }
   }
 
@@ -62,16 +98,16 @@ void chkErr(const char* _outErr) {
   }
 }
 
-bool gameIsSelected(void) { return m_frameCount > DEVICE_PIX_X; }
+bool gameIsSelected(void) { return m_fCount > DEVICE_PIX_X; }
 
-void render(void) {
+void renderGameSelect(void) {
   if (gameIsSelected()) return;
 
   pd->graphics->drawBitmap(m_gameImg[kYCGB], 1, 0, kBitmapUnflipped);
   pd->graphics->drawBitmap(m_gameImg[kFactoryFarming], 132 + 2, 0, kBitmapUnflipped);
   pd->graphics->drawBitmap(m_gameImg[kCascada], 132 + 132 + 3, 0, kBitmapUnflipped);
 
-  const bool flash = (m_frameCount % 50) < 25 && !m_animateOut;
+  const bool flash = (m_fCount % 50) < 25 && !m_animateOut;
 
   pd->graphics->setDrawMode((flash && m_selected == kYCGB) ? kDrawModeInverted : kDrawModeCopy);
   pd->graphics->drawBitmap(m_catImg, 1, 0, kBitmapUnflipped);
@@ -115,7 +151,7 @@ void butR(void) {
 
 void butA(void) {
   ++m_animateOut;
-  m_frameCount = 0;
+  m_fCount = 0;
   stopS();
   pd->sound->sampleplayer->play(m_samplePlayerA, 1, 1.0f);
 }
@@ -134,7 +170,7 @@ int gameLoop(void* _data) {
     return 1;
   }
 
-  ++m_frameCount;
+  ++m_fCount;
   pd->graphics->setBackgroundColor(kColorWhite);
 
   if (!m_catImg) {
@@ -164,7 +200,7 @@ int gameLoop(void* _data) {
     pd->sound->fileplayer->play(m_tracks[kYCGB], 0);
   }
 
-  render();
+  renderGameSelect();
 
   if (!m_animateOut) {
     PDButtons current, pushed, released = 0;
@@ -173,7 +209,7 @@ int gameLoop(void* _data) {
     if (pushed & kButtonLeft) butR();
     if (pushed & kButtonA) butA();
   } else {
-    m_animateOut += m_frameCount;
+    m_animateOut += m_fCount;
   }
 
   return 1;
