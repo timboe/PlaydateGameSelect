@@ -98,7 +98,7 @@ void chkErr(const char* _outErr) {
   }
 }
 
-bool gameIsSelected(void) { return m_fCount > DEVICE_PIX_X; }
+bool gameIsSelected(void) { return m_animateOut > DEVICE_PIX_X * 2; }
 
 void renderGameSelect(void) {
   if (gameIsSelected()) return;
@@ -233,6 +233,8 @@ void processTerminate(void) {
     if (getGameMode() != kTitles && !IOOperationInProgress()) {
       synchronousSave();
     }
+  } else if (m_selected == kCascada) {
+    IODoSave();
   }
 
 
